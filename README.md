@@ -76,7 +76,6 @@ vercel --prod     # vercel.json builds frontend/ as static and api/index.py as a
 | `api/index.py`, `vercel.json`, `requirements.txt` | Vercel deployment: static frontend plus one Python serverless function. |
 | `docker-compose.yml` | Runs both services: `backend` (:8000) and `frontend` (:3000), which starts once the backend is healthy. |
 | `docs/ANALYSIS.md` | Findings and method. |
-| `docs/VIDEO_SCRIPT.md` | Outline for the two-part demo video. |
 
 ## API
 

@@ -3,9 +3,10 @@
 A web app for a UK utility's day-ahead buying desk. It shows:
 
 1. **The wind forecast the desk actually had at decision time.** For each delivery day, this is the latest Elexon
-   forecast published before day-ahead gate closure on D-1, plotted against what was generated, with a P10–P90 band.
+   forecast published before day-ahead gate closure on D-1, plotted against what was generated, with a historical P10–P90 error range.
 2. **How accurate that forecast is.** It measures error by lead time, by day and by hour of day, and shows the error
-   distribution. It also offers a look-ahead-free bias correction that cuts the typical error by about a third.
+   distribution. It also offers an exploratory, look-ahead-free bias correction that lowered the typical error by about a third in
+   the January back-test.
 
 Scope: GB national **wind** only, using Elexon BMRS `FUELHH` (actuals, `fuelType=WIND`) and `WINDFOR` (forecasts),
 for purchase decisions made in **January 2026** (delivery days 2 Jan – 1 Feb 2026).
@@ -91,8 +92,11 @@ Interactive docs: `/docs` (FastAPI/OpenAPI).
 ## Key design decisions
 
 - **No look-ahead.** A forecast counts only if `publishTime ≤ gate closure`. The bias correction uses only delivery days
-  D-2 and earlier, whose actuals are all published before D-1's gate. The P10–P90 band for a day is built from the
-  *other* days' errors. Each rule is covered by a unit test.
+  D-2 and earlier, whose actuals are all published before D-1's gate. The P10–P90 band for a day uses the same past-only
+  window (D-2 back to D-15), so later outcomes never shape it. Each rule is covered by a unit test.
+- **Honest labels.** The band is an empirical historical error range, not a validated forecast interval, and the
+  "indicative low-wind energy" figure sums hourly percentiles, so it is not a calibrated daily P10. The app reports the
+  measured bias without attributing a cause, because the two datasets alone cannot establish one.
 - **Decision time = 09:20 UK on D-1 by default.** This is an assumption: GB day-ahead auctions close on the morning
   of D-1, and the exact time should be confirmed with the desk. It can be changed in the UI. Forecasts are published
   at fixed times (02:30, 04:30, 07:30, 09:30, 11:30, 15:30, 18:30 and 22:30 UTC), so 09:20 picks the 07:30 run.

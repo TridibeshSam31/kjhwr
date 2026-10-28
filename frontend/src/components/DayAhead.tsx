@@ -29,8 +29,8 @@ export default function DayAhead({ day, gate, corrected, windowDays }:
       <div className="tiles">
         <Tile label="Forecast wind energy" value={gwh(data.energyMWh.forecast)}
           note={`Mean ${gw(data.energyMWh.forecast / 24)} across the day`} />
-        <Tile label="Wind you can count on (P10)" value={gwh(data.energyMWh.p10)}
-          note="9 times in 10, wind delivered at least this much — plan to procure the gap" />
+        <Tile label="Indicative low-wind energy" value={gwh(data.energyMWh.p10)}
+          note="Sum of hourly forecasts shifted by the past P10 error. A historical-error estimate, not a calibrated daily probability bound" />
         <Tile label="Wind actually delivered" value={gwh(data.energyMWh.actual)}
           note="Known only after the day — shown for back-testing" />
         <Tile label="Forecast error on the day" value={signedGw(acc.bias)}
@@ -46,7 +46,7 @@ export default function DayAhead({ day, gate, corrected, windowDays }:
         <div className="legend">
           <span><i className="swatch" style={{ background: "var(--actual)" }} />Actual, GW (half-hourly)</span>
           <span><i className="swatch dash" />{label} (hourly)</span>
-          <span><i className="swatch box" style={{ background: "var(--band)" }} />Likely range P10–P90</span>
+          <span><i className="swatch box" style={{ background: "var(--band)" }} />Historical error range (P10–P90)</span>
         </div>
         <div style={{ height: 340 }}>
           <ResponsiveContainer>
@@ -61,7 +61,7 @@ export default function DayAhead({ day, gate, corrected, windowDays }:
                   const r = payload[0].payload as Row;
                   const tip = [{ label: "Actual", value: gw(r.actual, 2), color: "var(--actual)" }];
                   if (r.forecast != null) tip.push({ label, value: gw(r.forecast, 2), color: "var(--forecast)" });
-                  if (r.band) tip.push({ label: "Range P10–P90", value: `${gw(r.band[0])} – ${gw(r.band[1])}`, color: "" });
+                  if (r.band) tip.push({ label: "Historical range", value: `${gw(r.band[0])} – ${gw(r.band[1])}`, color: "" });
                   return <Tooltip title={ukTime(r.time)} rows={tip} />;
                 }}
               />
@@ -74,8 +74,9 @@ export default function DayAhead({ day, gate, corrected, windowDays }:
           </ResponsiveContainer>
         </div>
         <p className="sub" style={{ marginTop: 10, marginBottom: 0 }}>
-          The range comes from how wrong the same forecast was on the <em>other</em> January days
-          (P10 {signedGw(data.band.p10)}, P90 {signedGw(data.band.p90)}), so this day's outcome does not shape its own band.
+          The shaded range adds the 10th and 90th percentile forecast errors (P10 {signedGw(data.band.p10)},
+          P90 {signedGw(data.band.p90)}) from the previous {windowDays} settled delivery days, the ones known at decision time.
+          It is an empirical historical range; its coverage has not been validated as a forecast interval.
         </p>
       </Card>
     </>

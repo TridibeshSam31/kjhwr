@@ -95,22 +95,30 @@ def correction_factor(ds: Dataset, day: date, gate: time) -> float:
     Uses delivery days D-2 .. D-(N+1): their actuals are all published before gate
     closure on D-1, so the correction never uses information the desk did not have.
     """
-    window = [day - timedelta(days=k) for k in range(2, CORRECTION_WINDOW_DAYS + 2)]
-    hist = decision_pairs(ds, gate, window)
+    hist = decision_pairs(ds, gate, history_window(day))
     total_f = sum(f for *_, f in hist)
     return sum(a for *_, a, _ in hist) / total_f if total_f else 1.0
 
 
-def error_band(ds: Dataset, gate: time, exclude: date, corrected=False) -> tuple:
-    """Empirical P10/P90 of decision-time errors from the *other* days (no peeking)."""
-    errs = [a - f for d, _, _, a, f in decision_pairs(ds, gate, corrected=corrected) if d != exclude]
+def history_window(day: date) -> list:
+    """Delivery days D-2 .. D-(N+1): fully settled before gate closure on D-1."""
+    return [day - timedelta(days=k) for k in range(2, CORRECTION_WINDOW_DAYS + 2)]
+
+
+def error_band(ds: Dataset, gate: time, day: date, corrected=False) -> tuple:
+    """Empirical P10/P90 of decision-time errors over the trailing history window.
+
+    Past-only: uses the same D-2 .. D-(N+1) days as the correction, never later dates.
+    This is a historical error range, not a validated predictive interval.
+    """
+    errs = [a - f for *_, a, f in decision_pairs(ds, gate, history_window(day), corrected)]
     return quantile(errs, 0.10), quantile(errs, 0.90)
 
 
 def day_view(ds: Dataset, day: date, gate: time, corrected=False) -> dict:
     cutoff = gate_closure(day, gate)
     k = correction_factor(ds, day, gate) if corrected else 1.0
-    lo, hi = error_band(ds, gate, exclude=day, corrected=corrected)
+    lo, hi = error_band(ds, gate, day, corrected)
     hourly, pairs, used = [], [], set()
     for t in day_slots(day, 60):
         fc = ds.latest_forecast(t, cutoff)

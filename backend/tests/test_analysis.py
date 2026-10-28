@@ -68,3 +68,22 @@ def test_correction_factor_uses_only_finished_days():
     ds = ds_with(rows_f, rows_a)
     # D-1 is not finished at gate closure, so its (absurd) ratio must be ignored.
     assert an.correction_factor(ds, day, time(9, 20)) == 0.5
+
+
+def test_error_band_ignores_later_days():
+    def rows(days_and_ratios):
+        f, a = [], []
+        for d, ratio in days_and_ratios:
+            cutoff = an.gate_closure(d, time(9, 20)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            for t in an.day_slots(d, 60):
+                ts = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+                f.append([cutoff, ts, 1000])
+                a.append([ts, 1000 * ratio])
+        return f, a
+
+    day = date(2026, 1, 20)
+    past = [(date(2026, 1, 18), 0.8)]
+    base = an.error_band(ds_with(*rows(past)), time(9, 20), day)
+    # Adding a wildly wrong *later* day must not change the band for `day`.
+    later = an.error_band(ds_with(*rows(past + [(date(2026, 1, 25), 5.0)])), time(9, 20), day)
+    assert base == later == (-200, -200)

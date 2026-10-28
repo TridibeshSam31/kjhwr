@@ -21,7 +21,7 @@ export default function Accuracy({ gate, corrected, onPickDay }:
           note={`${pct(o.nmae)} of average wind output (${gw(o.meanActual)})`} />
         <Tile label="Systematic bias" value={signedGw(o.bias, 2)}
           note={o.bias < 0 ? "Wind came in below forecast on average" : "Wind came in above forecast on average"} />
-        <Tile label="Plan-for shortfall (P10)" value={signedGw(o.p10, 1)}
+        <Tile label="P10 hourly error" value={signedGw(o.p10, 1)}
           note="In 9 of 10 hours the shortfall vs forecast was no worse than this" />
         <Tile label="Worst hourly shortfall" value={signedGw(o.maxShortfall, 1)} note={`Across ${o.n} hours in the pilot`} />
       </div>
@@ -30,13 +30,14 @@ export default function Accuracy({ gate, corrected, onPickDay }:
         <ul className="insights">
           <li>Using the {which} available at {gate} on D-1 (lead time {Math.round(r.leadRange[0])}–{Math.round(r.leadRange[1])} h),
             a typical hour is off by <strong>{gw(o.mae)}</strong>; the RMSE is {gw(o.rmse)}.</li>
-          <li>The raw Elexon forecast <strong>over-states wind by {gw(-raw.data.overall.bias)}</strong> on average — even a few hours
-            ahead. Constraint/curtailment of wind farms is a likely driver: a forecast of
-            what the wind <em>could</em> produce is not what is metered.</li>
-          <li>A simple, look-ahead-free correction (scale by the last 14 finished days' actual/forecast ratio) cuts the
-            typical miss by <strong>{pct(improvement)}</strong>: {gw(raw.data.overall.mae, 2)} → {gw(cor.data.overall.mae, 2)}.</li>
-          <li>Errors are skewed to the downside: hedge to the <strong>P10</strong> level ({signedGw(o.p10)} from forecast)
-            rather than the forecast itself when shortfalls are costly.</li>
+          <li>Measured over January, actual wind averaged <strong>{gw(-raw.data.overall.bias, 2)} below</strong> the Elexon
+            forecast, and the gap persists even a few hours ahead. These two datasets alone do not establish why.</li>
+          <li>As an exploratory baseline, scaling each day's forecast by the actual/forecast ratio of the previous 14 settled
+            days lowered the typical miss by <strong>{pct(improvement)}</strong> in this back-test
+            ({gw(raw.data.overall.mae, 2)} → {gw(cor.data.overall.mae, 2)}). One month is not enough to show it will hold
+            in future trading.</li>
+          <li>Errors are skewed to the downside: in 9 of 10 hours wind came in no more than {gw(-o.p10)} below
+            the forecast, but rarely more than {gw(o.p90)} above it.</li>
         </ul>
       </Card>
 
@@ -171,7 +172,7 @@ function Compare({ raw, cor }: { raw: Stats; cor: Stats }) {
     ["Root mean square error", (s) => gw(s.rmse, 2)],
     ["Bias (actual − forecast)", (s) => signedGw(s.bias, 2)],
     ["MAE as % of mean output", (s) => pct(s.nmae)],
-    ["P10 error (plan-for shortfall)", (s) => signedGw(s.p10, 2)],
+    ["P10 error", (s) => signedGw(s.p10, 2)],
     ["P90 error", (s) => signedGw(s.p90, 2)],
     ["Worst hourly shortfall", (s) => signedGw(s.maxShortfall, 2)],
   ];
